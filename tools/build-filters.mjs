@@ -4,6 +4,7 @@ import { readdirSync, writeFileSync, readFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { RECIPES } from "../app/recipes.js";
+import { CAMPER_RECIPES } from "../app/recipes-camper.js";
 import { buildFilter, serializeFlt, parseFlt, applyFilter } from "../app/engine.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -11,11 +12,14 @@ const out = join(root, "filters");
 mkdirSync(out, { recursive: true });
 
 const pretty = (name) => name.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "");
-for (const r of RECIPES) {
-  const text = serializeFlt(buildFilter(r));
-  parseFlt(text); // validate: 777 values
-  writeFileSync(join(out, `${pretty(r.name)}.flt`), text);
-  console.log("wrote", `filters/${pretty(r.name)}.flt`);
+for (const [folder, recipes] of [["camp-shades", RECIPES], ["camper-snapper", CAMPER_RECIPES]]) {
+  mkdirSync(join(out, folder), { recursive: true });
+  for (const r of recipes) {
+    const text = serializeFlt(buildFilter(r));
+    parseFlt(text); // validate: 777 values
+    writeFileSync(join(out, folder, `${pretty(r.name)}.flt`), text);
+  }
+  console.log("wrote", recipes.length, `filters to filters/${folder}/`);
 }
 
 // Index presets (official Camp Snap files + your own) for the app.

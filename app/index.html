@@ -48,8 +48,10 @@
         <div class="badge" id="badge"></div>
       </div>
       <div class="viewer-tools">
-        <button class="key small" id="compareBtn" aria-pressed="false">Split</button>
-        <span class="hint">Press &amp; hold the frame for the original</span>
+        <button class="key small" id="compareBtn" aria-pressed="false" title="Original vs filtered">Split</button>
+        <button class="key small" id="abBtn" aria-pressed="false" title="Compare two filters side by side">A | B</button>
+        <button class="key small" id="swapBtn" hidden title="Swap A and B">Swap ⇄</button>
+        <span class="hint" id="viewHint">Press &amp; hold the frame for the original</span>
       </div>
     </section>
 
@@ -58,6 +60,7 @@
         <p class="stock" id="curGroup"></p>
         <h2 class="cur-name" id="curName">—</h2>
         <p class="cur-desc" id="curDesc"></p>
+        <p class="cmp-info" id="cmpInfo" hidden>This is <b class="slot-b">B</b>, compared with <b class="slot-a">A</b> <span id="cmpName"></span></p>
         <div class="cur-actions">
           <button class="key primary" id="dlFlt">Get .flt</button>
           <button class="key" id="savePhoto">Save print</button>

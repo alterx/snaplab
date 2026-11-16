@@ -1,7 +1,7 @@
 // Offline cache. Bump VERSION when files change.
-const VERSION = "snaplab-v3";
+const VERSION = "snaplab-v4";
 const SHELL = [
-  "./", "index.html", "styles.css", "app.js", "engine.js", "recipes.js", "camper-snapper.js", "chart.js", "gamma-table.js",
+  "./", "index.html", "styles.css", "app.js", "engine.js", "recipes.js", "recipes-camper.js", "chart.js", "gamma-table.js",
   "manifest.webmanifest", "icons/icon-180.png", "icons/icon-192.png", "icons/icon-512.png", "presets/index.json",
 ];
 
@@ -37,8 +37,8 @@ self.addEventListener("fetch", (e) => {
     );
     return;
   }
-  // Same-origin files and Camper Snapper's .flt files: network first, cached copy when offline.
-  if (url.origin !== location.origin && url.hostname !== "campersnapper.com") return;
+  // Same-origin files: network first, cached copy when offline.
+  if (url.origin !== location.origin) return;
   e.respondWith(
     fetch(e.request, { cache: "no-cache" })
       .then((res) => {

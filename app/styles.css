@@ -231,3 +231,24 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 20px; background: v
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 .group-head small a { color: var(--amber); text-decoration: none; border-bottom: 1px dotted currentColor; }
 .group-head small a:hover { color: var(--paper); }
+
+/* ---------- A|B compare ---------- */
+.viewer-tools { flex-wrap: wrap; }
+.cmp-info { margin: -4px 0 14px; font: 500 12px var(--mono); color: var(--muted); letter-spacing: .04em; }
+.cmp-info #cmpName { color: var(--paper); text-transform: uppercase; }
+.slot-a, .slot-b { display: inline-block; padding: 1px 6px; border-radius: 2px; color: #170501; font-weight: 600; }
+.slot-a { background: var(--amber); }
+.slot-b { background: var(--safelight); }
+.frame[data-slot="a"] .mark { opacity: 1; }
+.frame[data-slot="a"] .mark path { stroke: var(--amber); stroke-dasharray: 6 4; }
+.frame[data-slot]:not([data-slot=""])::marker { content: none; }
+.frame[data-slot="a"] .nm, .frame[data-slot="b"] .nm, .frame[data-slot="ab"] .nm { color: var(--paper); }
+.frame .slot {
+  position: absolute; top: 26px; left: 7px; z-index: 3; min-width: 18px; height: 18px; padding: 0 4px;
+  display: none; place-items: center; border-radius: 2px; font: 600 11px/1 var(--mono); color: #170501;
+}
+.frame[data-slot="a"] .slot { display: grid; background: var(--amber); }
+.frame[data-slot="b"] .slot { display: grid; background: var(--safelight); }
+.frame[data-slot="ab"] .slot { display: grid; background: linear-gradient(90deg, var(--amber) 50%, var(--safelight) 50%); }
+.group-head { flex-wrap: wrap; gap: 4px 12px; }
+.group-head h3 { white-space: nowrap; }

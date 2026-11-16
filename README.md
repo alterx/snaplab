@@ -4,11 +4,11 @@ Live app: https://alterx.github.io/snaplab/
 
 ## What's here
 
-- `filters/`: ready-to-use `.flt` files. These are look-alikes of the Camp Shades gallery (Kino, Kino Flat/Gentle/Medium/High, Ultra, Noir, Cafe Latte, Milky Blacks, Expired, Superor, Cyanotype, Red Velvet, Tuscany). The real Camp Shades files are paid, so these were interpreted from each filter's published description rather than copied.
-- `app/`: **Snap Lab**, a PWA that previews any `.flt` on your photos. It emulates the camera pipeline, lets you tweak a filter and export it.
-- `app/recipes.js`: the filter definitions. Edit these, then rebuild.
+- `filters/camp-shades/`: 14 look-alikes of the [Camp Shades](https://www.campshades.com/gallery) gallery. The originals are paid, so these were interpreted from each filter's published description.
+- `filters/camper-snapper/`: our own versions of the 15 free [Camper Snapper](https://campersnapper.com/filters) filters by Turtle Bard (Supra, Eternia, Rushmore, Boom Boom, etc.). They were fitted to the originals with `tools/fit-flt.mjs` and average under 1 level of difference out of 255.
+- `app/`: **Snap Lab**, a PWA that previews any `.flt` on your photos. It emulates the camera pipeline, compares two filters side by side (A | B), lets you tweak a filter and exports it.
+- `app/recipes.js`, `app/recipes-camper.js`: the filter definitions. Edit these, then rebuild.
 - `app/presets/`: the official Camp Snap presets (Standard, B&W, Vintage, Kodaclone, 101Clone).
-- `app/camper-snapper.js`: the free filters from [Camper Snapper](https://campersnapper.com/filters), made by Turtle Bard. Supra, Eternia, Rushmore, Boom Boom and the rest are fetched live from their site, not rehosted. Download them for the camera from there or with the app's "Get .flt" button.
 
 ## Install a filter on the camera
 
@@ -46,3 +46,11 @@ B0 … B255
 ```
 
 Pipeline: linear RGB → matrix → camera gamma → RGB curves. The preview undoes the camera gamma on your photo first, the same way the official editor does. This makes it a close approximation, not a guarantee of what the sensor will produce.
+
+## Refit from reference .flt files
+
+```bash
+node tools/fit-flt.mjs path/to/folder-with-originals
+```
+
+Then run `node tools/build-filters.mjs`.

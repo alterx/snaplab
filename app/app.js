@@ -1,9 +1,13 @@
 import { parseFlt, serializeFlt, buildFilter, applyFilter, tweakFilter, NEUTRAL_TWEAK } from "./engine.js";
 import { RECIPES } from "./recipes.js";
 import { drawChart } from "./chart.js";
-import { CAMPER_SNAPPER, CAMPER_SNAPPER_SITE } from "./camper-snapper.js";
+import { CAMPER_RECIPES } from "./recipes-camper.js";
 
-const GROUP_LINKS = { "Camper Snapper": CAMPER_SNAPPER_SITE };
+// Credit the originals each look-alike set was made after.
+const GROUP_LINKS = {
+  "Camp Shades look-alikes": ["after campshades.com", "https://www.campshades.com/gallery"],
+  "Camper Snapper look-alikes": ["after Turtle Bard", "https://campersnapper.com/filters"],
+};
 
 const $ = (id) => document.getElementById(id);
 const view = $("view"), vctx = view.getContext("2d");
@@ -23,30 +27,20 @@ const state = {
   selected: store.get(LS_SELECTED, "kino"),
   tweak: { ...NEUTRAL_TWEAK },
   split: false, splitX: 0.5, holding: false,
+  compareA: null,      // key of the filter pinned as "A" in A|B mode (B is the selected one)
   origCanvas: document.createElement("canvas"),
   filtCanvas: document.createElement("canvas"),
+  aCanvas: document.createElement("canvas"), aRendered: null,
 };
 
 // ---------- filters ----------
 
 async function loadFilters() {
-  const list = RECIPES.map((r) => ({
-    key: r.id, name: r.name, desc: r.desc, group: "Camp Shades look-alikes",
-    filter: buildFilter(r), file: `${slug(r.name)}.flt`,
-  }));
-  // Camper Snapper's free filters, fetched live from their site.
-  const remote = await Promise.all(CAMPER_SNAPPER.map(async (c) => {
-    try {
-      const res = await fetch(c.url);
-      if (!res.ok) throw new Error(res.status);
-      return {
-        key: `cs:${c.file}`, name: c.name, file: c.file, desc: `${c.kind}. ${c.desc}`,
-        group: "Camper Snapper", filter: parseFlt(await res.text()),
-      };
-    } catch (e) { console.warn("Camper Snapper filter unavailable", c.name, e); return null; }
-  }));
-  list.push(...remote.filter(Boolean));
-  if (!remote.some(Boolean)) toast("Camper Snapper filters need a connection");
+  const fromRecipe = (r, group) => ({ key: r.id, name: r.name, desc: r.desc, group, filter: buildFilter(r), file: `${slug(r.name)}.flt` });
+  const list = [
+    ...RECIPES.map((r) => fromRecipe(r, "Camp Shades look-alikes")),
+    ...CAMPER_RECIPES.map((r) => fromRecipe(r, r.group)),
+  ];
 
   try {
     const names = await (await fetch("presets/index.json")).json();
@@ -103,6 +97,7 @@ function setSource(canvas) {
 
   [state.origCanvas, state.filtCanvas, view].forEach((c) => { c.width = pw; c.height = ph; });
   state.origCanvas.getContext("2d").putImageData(state.preview, 0, 0);
+  state.aCanvas.width = pw; state.aCanvas.height = ph; state.aRendered = null;
   renderMain();
   renderThumbs();
 }
@@ -118,12 +113,21 @@ function renderMain() {
     const out = new ImageData(state.preview.width, state.preview.height);
     applyFilter(activeFilter(), state.preview, out);
     state.filtCanvas.getContext("2d").putImageData(out, 0, 0);
+    if (state.compareA && state.aRendered !== state.compareA) {
+      const a = new ImageData(state.preview.width, state.preview.height);
+      applyFilter(byKey(state.compareA).filter, state.preview, a);
+      state.aCanvas.getContext("2d").putImageData(a, 0, 0);
+      state.aRendered = state.compareA;
+    }
     compose();
   });
 }
 
 function compose() {
-  const w = view.width, h = view.height;
+  if (!state.preview) return;
+  if (state.compareA) return composeAB();
+  const w = state.preview.width, h = state.preview.height;
+  if (view.width !== w || view.height !== h) { view.width = w; view.height = h; }
   vctx.drawImage(state.holding ? state.origCanvas : state.filtCanvas, 0, 0);
   if (state.split && !state.holding) {
     const x = Math.round(w * state.splitX);
@@ -138,6 +142,38 @@ function compose() {
     split.style.height = `${r.height}px`;
   }
   $("badge").textContent = state.holding ? "Original" : state.split ? "Original ◂ ▸ Filtered" : "";
+}
+
+// A|B: two frames side by side, or stacked when that shows them bigger.
+function composeAB() {
+  const w = state.preview.width, h = state.preview.height, gap = Math.round(Math.max(w, h) * 0.025);
+  const availW = $("stage").clientWidth || w;
+  const availH = parseFloat(getComputedStyle(view).maxHeight) || h;
+  const sideScale = Math.min(availW / (2 * w + gap), availH / h);
+  const stackScale = Math.min(availW / w, availH / (2 * h + gap));
+  const stacked = stackScale > sideScale;
+  const W = stacked ? w : 2 * w + gap, H = stacked ? 2 * h + gap : h;
+  if (view.width !== W || view.height !== H) { view.width = W; view.height = H; }
+  vctx.fillStyle = "#070605";
+  vctx.fillRect(0, 0, W, H);
+  const bx = stacked ? 0 : w + gap, by = stacked ? h + gap : 0;
+  vctx.drawImage(state.holding ? state.origCanvas : state.aCanvas, 0, 0);
+  vctx.drawImage(state.holding ? state.origCanvas : state.filtCanvas, bx, by);
+  // Slot labels, sized for how big the canvas is actually displayed.
+  const shown = view.getBoundingClientRect().width / W || 1;
+  const fs = Math.round(12 / shown), pad = Math.round(6 / shown);
+  vctx.font = `600 ${fs}px "IBM Plex Mono", monospace`;
+  vctx.textBaseline = "top";
+  const tag = (text, x, y, bg) => {
+    const tw = vctx.measureText(text).width;
+    vctx.fillStyle = bg; vctx.fillRect(x + pad, y + pad, tw + pad * 2, fs + pad * 1.4);
+    vctx.fillStyle = "#170501"; vctx.fillText(text, x + pad * 2, y + pad * 1.5);
+  };
+  const a = byKey(state.compareA), b = current();
+  tag(`A · ${a.name.toUpperCase()}`, 0, 0, "#e9a23b");
+  tag(`B · ${b.name.toUpperCase()}${tweaked() ? " *" : ""}`, bx, by, "#ff3d22");
+  $("split").hidden = true;
+  $("badge").textContent = state.holding ? "Original" : "";
 }
 
 let thumbJob = 0;
@@ -156,7 +192,8 @@ function renderThumbs() {
     const head = el("div", "group-head");
     const meta = el("small", null, `${items.length} exp.`);
     if (GROUP_LINKS[name]) {
-      const a = Object.assign(el("a", null, "by Turtle Bard ↗"), { href: GROUP_LINKS[name], target: "_blank", rel: "noopener" });
+      const [label, href] = GROUP_LINKS[name];
+      const a = Object.assign(el("a", null, `${label} ↗`), { href, target: "_blank", rel: "noopener" });
       meta.append(" · ", a);
     }
     head.append(el("h3", null, name), meta);
@@ -167,8 +204,9 @@ function renderThumbs() {
       b.dataset.key = f.key;
       b.setAttribute("aria-current", String(f.key === state.selected));
       b.setAttribute("aria-label", f.name);
+      b.dataset.slot = slotOf(f.key);
       const c = sized(THUMB_W, THUMB_H);
-      b.append(el("span", "no", `▸ ${frameNo(f)}`), c, el("span", "nm", f.name), greasePencil());
+      b.append(el("span", "no", `▸ ${frameNo(f)}`), c, el("span", "nm", f.name), greasePencil(), slotBadge());
       if (f.removable) {
         const x = el("span", "x", "✕");
         x.title = "Remove";
@@ -200,7 +238,63 @@ function renderThumbs() {
 function select(key) {
   state.selected = key;
   store.set(LS_SELECTED, key);
-  document.querySelectorAll(".frame").forEach((t) => t.setAttribute("aria-current", String(t.dataset.key === key)));
+  markFrames();
+  updateCurrentInfo();
+  renderMain();
+}
+
+function markFrames() {
+  document.querySelectorAll(".frame").forEach((t) => {
+    t.setAttribute("aria-current", String(t.dataset.key === state.selected));
+    t.dataset.slot = slotOf(t.dataset.key);
+    t.querySelector(".slot").textContent = { a: "A", b: "B", ab: "AB" }[t.dataset.slot] || "";
+  });
+}
+function slotOf(key) {
+  if (!state.compareA) return "";
+  return key === state.selected ? (key === state.compareA ? "ab" : "b") : key === state.compareA ? "a" : "";
+}
+function slotBadge() {
+  const s = el("span", "slot");
+  s.setAttribute("aria-hidden", "true");
+  return s;
+}
+const byKey = (key) => state.filters.find((f) => f.key === key);
+const tweaked = () => Object.keys(NEUTRAL_TWEAK).some((k) => state.tweak[k] !== NEUTRAL_TWEAK[k]);
+
+// ---------- compare modes ----------
+
+function setSplit(on) {
+  state.split = on;
+  if (on) state.compareA = null;
+  syncModes();
+}
+function setAB(on) {
+  if (on) {
+    state.split = false;
+    state.compareA = state.selected;
+    // Start B on the next frame so there's something to compare straight away.
+    const i = state.filters.findIndex((f) => f.key === state.selected);
+    state.selected = state.filters[(i + 1) % state.filters.length].key;
+    store.set(LS_SELECTED, state.selected);
+    toast("A pinned. Tap frames to change B");
+  } else state.compareA = null;
+  syncModes();
+}
+function swapAB() {
+  if (!state.compareA) return;
+  [state.compareA, state.selected] = [state.selected, state.compareA];
+  store.set(LS_SELECTED, state.selected);
+  syncModes();
+}
+function syncModes() {
+  $("compareBtn").setAttribute("aria-pressed", String(state.split));
+  $("abBtn").setAttribute("aria-pressed", String(!!state.compareA));
+  $("swapBtn").hidden = !state.compareA;
+  $("viewHint").textContent = state.compareA
+    ? "Tap a frame to set B · hold for the original"
+    : state.split ? "Drag across the frame to move the split" : "Press & hold the frame for the original";
+  markFrames();
   updateCurrentInfo();
   renderMain();
 }
@@ -212,9 +306,13 @@ function updateCurrentInfo() {
   $("curGroup").textContent = `${frameNo(f)} · ${f.group}`;
   $("edgeName").textContent = f.name;
   $("edgeFrame").textContent = `▸ ${frameNo(f)}`;
-  const tweaked = Object.keys(NEUTRAL_TWEAK).some((k) => state.tweak[k] !== NEUTRAL_TWEAK[k]);
-  $("tweakState").textContent = tweaked ? "Modified" : "";
-  $("edgeStock").textContent = tweaked ? "SNAP LAB 400 · PUSHED" : "SNAP LAB 400";
+  const t = tweaked();
+  $("tweakState").textContent = t ? "Modified" : "";
+  $("edgeStock").textContent = t ? "SNAP LAB 400 · PUSHED" : "SNAP LAB 400";
+  const a = state.compareA && byKey(state.compareA);
+  $("edgeName").textContent = a ? `A ${a.name} ◂▸ B ${f.name}` : f.name;
+  $("cmpInfo").hidden = !a;
+  if (a) $("cmpName").textContent = a.name;
 }
 
 // Contact-sheet frame number, e.g. "07A".
@@ -298,13 +396,13 @@ function removeImported(f) {
   store.set(LS_IMPORTED, store.get(LS_IMPORTED, []).filter((x) => `import:${x.name}` !== f.key));
   state.filters = state.filters.filter((x) => x.key !== f.key);
   if (state.selected === f.key) state.selected = state.filters[0].key;
+  if (state.compareA === f.key) state.compareA = null;
   renderThumbs(); select(state.selected);
 }
 
 function downloadFlt() {
   const f = current();
-  const tweaked = $("tweakState").textContent !== "";
-  const name = tweaked ? f.file.replace(/\.flt$/i, "-tweaked.flt") : f.file;
+  const name = tweaked() ? f.file.replace(/\.flt$/i, "-tweaked.flt") : f.file;
   saveBlob(new Blob([serializeFlt(activeFilter())], { type: "text/plain" }), name);
 }
 
@@ -336,25 +434,23 @@ async function saveBlob(blob, name, preferShare = false) {
 
 function bindStage() {
   const stage = $("stage");
-  const setSplit = (e) => {
+  const moveSplit = (e) => {
     const r = view.getBoundingClientRect();
     state.splitX = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
     compose();
   };
   stage.addEventListener("pointerdown", (e) => {
     stage.setPointerCapture(e.pointerId);
-    if (state.split) setSplit(e); else { state.holding = true; compose(); }
+    if (state.split) moveSplit(e); else { state.holding = true; compose(); }
   });
-  stage.addEventListener("pointermove", (e) => { if (state.split && e.buttons) setSplit(e); });
+  stage.addEventListener("pointermove", (e) => { if (state.split && e.buttons) moveSplit(e); });
   const up = () => { if (state.holding) { state.holding = false; compose(); } };
   stage.addEventListener("pointerup", up);
   stage.addEventListener("pointercancel", up);
   stage.addEventListener("contextmenu", (e) => e.preventDefault());
-  $("compareBtn").addEventListener("click", () => {
-    state.split = !state.split;
-    $("compareBtn").setAttribute("aria-pressed", String(state.split));
-    compose();
-  });
+  $("compareBtn").addEventListener("click", () => setSplit(!state.split));
+  $("abBtn").addEventListener("click", () => setAB(!state.compareA));
+  $("swapBtn").addEventListener("click", swapAB);
   addEventListener("resize", compose);
   // Drag & drop photos or .flt files anywhere.
   addEventListener("dragover", (e) => e.preventDefault());
