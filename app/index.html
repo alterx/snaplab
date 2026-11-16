@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Snap Lab</title>
+  <meta name="description" content="Preview and tweak Camp Snap .flt filters on your own photos.">
+  <meta name="theme-color" content="#0f0c0a">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">
+      <h1>Snap<span>Lab</span></h1>
+      <p class="tagline">.flt bench · Camp Snap</p>
+    </div>
+    <div class="actions">
+      <label class="key primary" title="Choose a photo">
+        <input type="file" id="pickPhoto" accept="image/*" hidden>Photo
+      </label>
+      <label class="key" title="Take a photo">
+        <input type="file" id="takePhoto" accept="image/*" capture="environment" hidden>Shoot
+      </label>
+      <button class="key" id="chartBtn" title="Use the colour test chart">Chart</button>
+      <label class="key" title="Import a .flt file">
+        <input type="file" id="loadFlt" accept=".flt,text/plain" multiple hidden>+.flt
+      </label>
+    </div>
+  </header>
+
+  <main>
+    <section class="viewer" id="viewer">
+      <div class="stage" id="stage">
+        <div class="negative">
+          <div class="edge edge-top"><span id="edgeStock">SNAP LAB 400</span><span id="edgeFrame">▸ 01A</span></div>
+          <canvas id="view"></canvas>
+          <div class="edge edge-bottom"><span id="edgeName">KINO</span><span class="edge-safety">SAFETY FILM</span></div>
+        </div>
+        <div class="split" id="split" hidden><div class="handle">◂▸</div></div>
+        <div class="badge" id="badge"></div>
+      </div>
+      <div class="viewer-tools">
+        <button class="key small" id="compareBtn" aria-pressed="false">Split</button>
+        <span class="hint">Press &amp; hold the frame for the original</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="current">
+        <p class="stock" id="curGroup"></p>
+        <h2 class="cur-name" id="curName">—</h2>
+        <p class="cur-desc" id="curDesc"></p>
+        <div class="cur-actions">
+          <button class="key primary" id="dlFlt">Get .flt</button>
+          <button class="key" id="savePhoto">Save print</button>
+        </div>
+      </div>
+
+      <details class="drawer" id="tweak">
+        <summary><span>Develop</span><em id="tweakState"></em></summary>
+        <div class="sliders" id="sliders"></div>
+        <button class="key small" id="resetTweak">Reset</button>
+      </details>
+
+      <div id="groups"></div>
+
+      <details class="drawer help">
+        <summary><span>Loading the camera</span></summary>
+        <ol>
+          <li>Needs firmware V103B / V105, or a Camp Snap 2. Not the Pro, CS-8 or 110D.</li>
+          <li>Plug in by USB and copy <b>one</b> <code>.flt</code> to the root of the card. With several, the camera takes the first it finds.</li>
+          <li>Power on. <b>CUS</b> flashes when the filter loads.</li>
+        </ol>
+        <p>The preview replays the camera's pipeline (linear colour matrix → camera gamma → RGB curves) on an already-developed photo: close, not identical.</p>
+      </details>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
