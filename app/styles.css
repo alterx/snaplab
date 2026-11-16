@@ -229,3 +229,5 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 20px; background: v
   .edge-top { top: 13px; } .edge-bottom { bottom: 13px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.group-head small a { color: var(--amber); text-decoration: none; border-bottom: 1px dotted currentColor; }
+.group-head small a:hover { color: var(--paper); }

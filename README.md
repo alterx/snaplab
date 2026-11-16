@@ -7,7 +7,8 @@ Live app: https://alterx.github.io/snaplab/
 - `filters/`: ready-to-use `.flt` files. These are look-alikes of the Camp Shades gallery (Kino, Kino Flat/Gentle/Medium/High, Ultra, Noir, Cafe Latte, Milky Blacks, Expired, Superor, Cyanotype, Red Velvet, Tuscany). The real Camp Shades files are paid, so these were interpreted from each filter's published description rather than copied.
 - `app/`: **Snap Lab**, a PWA that previews any `.flt` on your photos. It emulates the camera pipeline, lets you tweak a filter and export it.
 - `app/recipes.js`: the filter definitions. Edit these, then rebuild.
-- `app/presets/`: the official Camp Snap presets (Standard, B&W, Vintage, Kodaclone, 101Clone) plus your `Supra-Camper-Snapper.flt`.
+- `app/presets/`: the official Camp Snap presets (Standard, B&W, Vintage, Kodaclone, 101Clone).
+- `app/camper-snapper.js`: the free filters from [Camper Snapper](https://campersnapper.com/filters), made by Turtle Bard. Supra, Eternia, Rushmore, Boom Boom and the rest are fetched live from their site, not rehosted. Download them for the camera from there or with the app's "Get .flt" button.
 
 ## Install a filter on the camera
 

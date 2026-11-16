@@ -1,6 +1,9 @@
 import { parseFlt, serializeFlt, buildFilter, applyFilter, tweakFilter, NEUTRAL_TWEAK } from "./engine.js";
 import { RECIPES } from "./recipes.js";
 import { drawChart } from "./chart.js";
+import { CAMPER_SNAPPER, CAMPER_SNAPPER_SITE } from "./camper-snapper.js";
+
+const GROUP_LINKS = { "Camper Snapper": CAMPER_SNAPPER_SITE };
 
 const $ = (id) => document.getElementById(id);
 const view = $("view"), vctx = view.getContext("2d");
@@ -31,16 +34,28 @@ async function loadFilters() {
     key: r.id, name: r.name, desc: r.desc, group: "Camp Shades look-alikes",
     filter: buildFilter(r), file: `${slug(r.name)}.flt`,
   }));
+  // Camper Snapper's free filters, fetched live from their site.
+  const remote = await Promise.all(CAMPER_SNAPPER.map(async (c) => {
+    try {
+      const res = await fetch(c.url);
+      if (!res.ok) throw new Error(res.status);
+      return {
+        key: `cs:${c.file}`, name: c.name, file: c.file, desc: `${c.kind}. ${c.desc}`,
+        group: "Camper Snapper", filter: parseFlt(await res.text()),
+      };
+    } catch (e) { console.warn("Camper Snapper filter unavailable", c.name, e); return null; }
+  }));
+  list.push(...remote.filter(Boolean));
+  if (!remote.some(Boolean)) toast("Camper Snapper filters need a connection");
+
   try {
     const names = await (await fetch("presets/index.json")).json();
-    for (const n of names) {
-      const text = await (await fetch(`presets/${n}`)).text();
+    const presets = await Promise.all(names.map(async (n) => [n, await (await fetch(`presets/${n}`)).text()]));
+    for (const [n, text] of presets) {
       const base = n.replace(/\.flt$/i, "");
-      const mine = /supra/i.test(base);
       list.push({
         key: `preset:${base}`, name: base.replace(/[-_]+/g, " "), file: n,
-        desc: mine ? "Your filter." : "Official Camp Snap preset.",
-        group: mine ? "Yours" : "Official Camp Snap", filter: parseFlt(text),
+        desc: "Official Camp Snap preset.", group: "Official Camp Snap", filter: parseFlt(text),
       });
     }
   } catch (e) { console.warn("presets unavailable", e); }
@@ -139,7 +154,12 @@ function renderThumbs() {
   for (const [name, items] of groups) {
     const sec = el("section", "group");
     const head = el("div", "group-head");
-    head.append(el("h3", null, name), el("small", null, `${items.length} exp.`));
+    const meta = el("small", null, `${items.length} exp.`);
+    if (GROUP_LINKS[name]) {
+      const a = Object.assign(el("a", null, "by Turtle Bard ↗"), { href: GROUP_LINKS[name], target: "_blank", rel: "noopener" });
+      meta.append(" · ", a);
+    }
+    head.append(el("h3", null, name), meta);
     sec.append(head);
     const grid = el("div", "sheet");
     for (const f of items) {
